@@ -1,28 +1,55 @@
+
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
+
+const categories = [
+  { name: "সব পণ্য", href: "/" },
+  { name: "চাল", href: "/category/chal" },
+  { name: "ডাল", href: "/category/dal" },
+  { name: "তেল", href: "/category/tel" },
+  { name: "সবজি", href: "/category/sobji" },
+  { name: "মাছ", href: "/category/mach" },
+  { name: "মাংস", href: "/category/mangsho" },
+];
 
 const Navbar = () => {
   const [banglaDate, setBanglaDate] = useState("");
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const router = useRouter();
+  const pathname = usePathname();
   const { data: session, isPending } = authClient.useSession();
 
   useEffect(() => {
-    const today = new Date();
+    const updateDate = () => {
+      setBanglaDate(
+        new Intl.DateTimeFormat("bn-BD", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+          timeZone: "Asia/Dhaka",
+        }).format(new Date())
+      );
+    };
 
-    setBanglaDate(
-      today.toLocaleDateString("bn-BD", {
-        dateStyle: "full",
-        timeZone: "Asia/Dhaka",
-      })
-    );
+    updateDate();
+
+    const timer = setInterval(updateDate, 60_000);
+
+    return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    setIsProfileOpen(false);
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   const handleSignOut = async () => {
     if (isSigningOut) return;
@@ -47,66 +74,88 @@ const Navbar = () => {
     }
   };
 
+  const isActiveCategory = (href: string) => {
+    if (href === "/") return pathname === "/";
+
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
+
   return (
     <header className="sticky top-0 z-50">
       <nav className="border-b border-green-100 bg-white shadow-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 md:px-6">
-          {/* Logo */}
-          <Link href="/" className="flex shrink-0 items-center">
-            <img
-              src="/logo-icon.png"
-              alt="Bazar-Dor Logo"
-              className="h-12 w-auto object-contain"
-            />
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          {/* Logo and Brand */}
+          <Link
+            href="/"
+            className="flex min-w-0 shrink items-center gap-3"
+            aria-label="Bazar-Dor Home"
+          >
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-green-50 ring-1 ring-green-100 sm:h-14 sm:w-14">
+              <img
+                src="/logo-icon.png"
+                alt="Bazar-Dor Logo"
+                className="h-full w-full object-contain p-1"
+              />
+            </span>
+
+            <span className="min-w-0">
+              <span className="block text-lg font-extrabold tracking-tight text-green-800 sm:text-2xl">
+                 বাজারদর
+                
+              </span>
+
+              <span className="mt-1 block text-xs font-medium leading-relaxed text-gray-500 sm:text-sm">
+                {banglaDate || "আজকের বাজারদর"}
+              </span>
+            </span>
           </Link>
 
-          {/* Bengali Date */}
-          <div className="hidden text-center md:block">
+          {/* Desktop Date */}
+          <div className="hidden text-center lg:block">
             <p className="text-sm font-medium text-gray-500">
               আজকের বাজারদর
             </p>
-
-            <p className="mt-1 text-sm font-semibold text-green-700">
-              {banglaDate}
+            <p className="mt-1 text-sm font-bold text-green-700">
+              নিত্যপণ্যের সঠিক দাম জানুন
             </p>
           </div>
 
-          {/* Authentication Buttons */}
+          {/* Authentication */}
           <div className="flex shrink-0 items-center gap-2">
             {isPending ? (
               <div
-                className="h-10 w-24 animate-pulse rounded-lg bg-gray-100"
+                className="h-9 w-20 animate-pulse rounded-lg bg-gray-100 sm:h-10 sm:w-24"
                 aria-label="Loading account"
               />
             ) : session?.user ? (
               <div className="relative">
-                {/* Profile Button */}
                 <button
                   type="button"
                   onClick={() => setIsProfileOpen((previous) => !previous)}
                   aria-expanded={isProfileOpen}
-                  aria-haspopup="true"
-                  className="flex items-center gap-2 rounded-lg border border-green-600 px-3 py-2 text-sm font-semibold text-green-700 transition hover:bg-green-50 md:px-4"
+                  aria-haspopup="menu"
+                  className="flex items-center gap-2 rounded-lg border border-green-600 px-2 py-2 text-sm font-semibold text-green-700 transition hover:bg-green-50 sm:px-4"
                 >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100 text-green-700">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100 font-bold text-green-800">
                     {session.user.name?.charAt(0)?.toUpperCase() || "U"}
                   </span>
 
-                  <span>Profile</span>
+                  <span className="hidden sm:inline">Profile</span>
 
-                  <span aria-hidden="true">
+                  <span aria-hidden="true" className="text-xs">
                     {isProfileOpen ? "▲" : "▼"}
                   </span>
                 </button>
 
-                {/* Profile Dropdown */}
                 {isProfileOpen && (
-                  <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-gray-100 bg-white p-2 shadow-lg">
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-full z-[60] mt-2 w-60 rounded-xl border border-gray-100 bg-white p-2 shadow-xl"
+                  >
                     <div className="border-b border-gray-100 px-3 py-3">
                       <p className="truncate text-sm font-semibold text-gray-900">
                         {session.user.name || "User"}
                       </p>
-
                       <p className="mt-1 truncate text-xs text-gray-500">
                         {session.user.email}
                       </p>
@@ -114,6 +163,7 @@ const Navbar = () => {
 
                     <Link
                       href="/profile"
+                      role="menuitem"
                       onClick={() => setIsProfileOpen(false)}
                       className="mt-1 block rounded-lg px-3 py-2 text-sm text-gray-700 transition hover:bg-green-50 hover:text-green-700"
                     >
@@ -122,6 +172,7 @@ const Navbar = () => {
 
                     <button
                       type="button"
+                      role="menuitem"
                       onClick={handleSignOut}
                       disabled={isSigningOut}
                       className="mt-1 w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
@@ -135,75 +186,82 @@ const Navbar = () => {
               <>
                 <Link
                   href="/signin"
-                  className="rounded-lg border border-green-600 px-3 py-2 text-sm font-semibold text-green-700 transition hover:bg-green-50 md:px-4"
+                  className="rounded-lg border border-green-600 px-2.5 py-2 text-xs font-semibold text-green-700 transition hover:bg-green-50 sm:px-4 sm:text-sm"
                 >
                   Sign In
                 </Link>
 
                 <Link
                   href="/signup"
-                  className="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-green-700 md:px-4"
+                  className="rounded-lg bg-green-600 px-2.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-green-700 sm:px-4 sm:text-sm"
                 >
                   Sign Up
                 </Link>
               </>
             )}
+
+            {/* Mobile Menu Button */}
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen((previous) => !previous)}
+              aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={isMobileMenuOpen}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-green-100 text-xl text-green-800 transition hover:bg-green-50 md:hidden"
+            >
+              {isMobileMenuOpen ? "✕" : "☰"}
+            </button>
           </div>
         </div>
 
-        {/* Categories */}
-        <div className="border-t border-green-50">
-          <div className="mx-auto flex max-w-7xl gap-6 overflow-x-auto px-4 py-3 md:justify-center">
-            <Link
-              href="/"
-              className="whitespace-nowrap font-semibold text-green-700"
-            >
-              সব পণ্য
-            </Link>
+        {/* Desktop Categories */}
+        <div className="hidden border-t border-green-50 md:block">
+          <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 overflow-x-auto px-4 py-2.5 sm:gap-4">
+            {categories.map((category) => {
+              const active = isActiveCategory(category.href);
 
-            <Link
-              href="/category/chal"
-              className="whitespace-nowrap text-gray-600 transition hover:text-green-700"
-            >
-              চাল
-            </Link>
-
-            <Link
-              href="/category/dal"
-              className="whitespace-nowrap text-gray-600 transition hover:text-green-700"
-            >
-              ডাল
-            </Link>
-
-            <Link
-              href="/category/tel"
-              className="whitespace-nowrap text-gray-600 transition hover:text-green-700"
-            >
-              তেল
-            </Link>
-
-            <Link
-              href="/category/sobji"
-              className="whitespace-nowrap text-gray-600 transition hover:text-green-700"
-            >
-              সবজি
-            </Link>
-
-            <Link
-              href="/category/mach"
-              className="whitespace-nowrap text-gray-600 transition hover:text-green-700"
-            >
-              মাছ
-            </Link>
-
-            <Link
-              href="/category/mangsho"
-              className="whitespace-nowrap text-gray-600 transition hover:text-green-700"
-            >
-              মাংস
-            </Link>
+              return (
+                <Link
+                  key={category.href}
+                  href={category.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                    active
+                      ? "bg-green-100 text-green-800"
+                      : "text-gray-600 hover:bg-green-50 hover:text-green-700"
+                  }`}
+                >
+                  {category.name}
+                </Link>
+              );
+            })}
           </div>
         </div>
+
+        {/* Mobile Categories */}
+        {isMobileMenuOpen && (
+          <div className="border-t border-green-100 bg-white px-4 py-3 md:hidden">
+            <div className="grid grid-cols-2 gap-2">
+              {categories.map((category) => {
+                const active = isActiveCategory(category.href);
+
+                return (
+                  <Link
+                    key={category.href}
+                    href={category.href}
+                    aria-current={active ? "page" : undefined}
+                    className={`rounded-lg px-3 py-2.5 text-sm font-semibold transition ${
+                      active
+                        ? "bg-green-100 text-green-800"
+                        : "bg-gray-50 text-gray-700 hover:bg-green-50 hover:text-green-700"
+                    }`}
+                  >
+                    {category.name}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Market Ticker */}
